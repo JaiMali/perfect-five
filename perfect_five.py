@@ -1,4 +1,47 @@
 import tkinter as tk
+from PIL import Image, ImageDraw, ImageFont
+
+
+#create a list of points that make up the number 5
+def generate_reference_five():
+
+    #blank image
+    img = Image.new('L', (500, 500), 'white')
+    draw = ImageDraw.Draw(img)
+
+    #Load the font
+    try:
+        font = ImageFont.truetype("LibreFranklin-Bold.ttf", 350)
+    except:
+        print("font not found! Using default.")
+        font = ImageFont.load_default()
+
+
+    # Figure out where to put the "5" so it's centered
+    bbox = draw.textbbox((0, 0), "5", font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    x = (500 - text_width) // 2
+    y = (500 - text_height) // 2 - 40  # Shift up a bit
+    
+    # Draw the "5" in black
+    draw.text((x, y), "5", font=font, fill='black')
+    
+    # Now find all the black pixels (these are our reference points)
+    reference_points = []
+    pixels = img.load()
+    
+    for py in range(500):
+        for px in range(500):
+            if pixels[px, py] < 128:  # Dark pixel = part of the "5"
+                reference_points.append((px, py))
+    
+    print(f"Generated {len(reference_points)} reference points!")
+    return reference_points
+
+# Generate the reference when the program starts
+reference_points = generate_reference_five()
 
 # Create the window
 window = tk.Tk()
