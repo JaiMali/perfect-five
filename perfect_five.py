@@ -10,7 +10,8 @@ ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
 
 
 #create a list of EDGE points that make up the number 5. Full pixels in 5 value some parts more than others -> uneven scoring.
-def generate_reference_five():
+#Now edge points for any character...
+def generate_reference(character="5"):
 
     #blank image
     img = Image.new('L', (500, 500), 'white')
@@ -25,7 +26,7 @@ def generate_reference_five():
 
 
     # Figure out where to put the "5" so it's centered
-    bbox = draw.textbbox((0, 0), "5", font=font)
+    bbox = draw.textbbox((0, 0), character, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
 
@@ -33,7 +34,7 @@ def generate_reference_five():
     y = (500 - text_height) // 2 - 40  # Shift up a bit
     
     # Draw the "5" in black
-    draw.text((x, y), "5", font=font, fill='black')
+    draw.text((x, y), character, font=font, fill='black')
     
     # Now find all the black pixels (these are our reference points)
     pixels = img.load()
@@ -56,7 +57,7 @@ def generate_reference_five():
     return edge_points
 
 
-#We should be able to draw the 5 anywhere.
+#We should be able to draw the character anywhere.
 def get_bounding_box(points):
     if not points:
         return 0, 0, 0, 0
@@ -145,7 +146,7 @@ def calculate_score():
 
 
 # Generate the reference when the program starts
-reference_points = generate_reference_five()
+reference_points = generate_reference("5")
 
 
 # Colors
@@ -176,7 +177,44 @@ subtitle_label = ctk.CTkLabel(
     font=ctk.CTkFont(size=14),
     text_color="#888888"
 )
-subtitle_label.pack(pady=(0, 20))
+subtitle_label.pack(pady=(0, 10))
+
+
+# Available characters
+CHARACTERS = ["5", "3", "8", "2", "S", "A", "B"]
+current_character = ctk.StringVar(value="5")
+
+def on_character_change(choice):
+    global reference_points
+    reference_points = generate_reference(choice)
+    reset()
+    subtitle_label.configure(text=f"Draw the character '{choice}' as perfectly as you can!")
+
+# Character selector frame
+selector_frame = ctk.CTkFrame(window, fg_color="transparent")
+selector_frame.pack(pady=(5, 10))
+
+char_label = ctk.CTkLabel(
+    selector_frame,
+    text="Character:",
+    font=ctk.CTkFont(size=14),
+    text_color="#888888"
+)
+char_label.pack(side="left", padx=(0, 10))
+
+char_dropdown = ctk.CTkOptionMenu(
+    selector_frame,
+    values=CHARACTERS,
+    variable=current_character,
+    command=on_character_change,
+    font=ctk.CTkFont(size=14),
+    fg_color=ACCENT_COLOR,
+    button_color=LINE_COLOR,
+    button_hover_color="#c73e54",
+    width=80
+)
+char_dropdown.pack(side="left")
+
 
 # Canvas frame (for rounded corners effect)
 canvas_frame = ctk.CTkFrame(window, fg_color=CANVAS_BG, corner_radius=20)
@@ -211,6 +249,29 @@ hint_label = ctk.CTkLabel(
 )
 hint_label.pack(pady=(0, 20))
 
+
+# Overlay toggle
+show_overlay = ctk.BooleanVar(value=False)
+
+def toggle_overlay():
+    if drawing_complete and show_overlay.get():
+        draw_reference_overlay()
+    elif drawing_complete:
+        # Redraw user's drawing without overlay
+        redraw_user_drawing()
+
+overlay_checkbox = ctk.CTkCheckBox(
+    window,
+    text="Show perfect shape",
+    variable=show_overlay,
+    command=toggle_overlay,
+    font=ctk.CTkFont(size=14),
+    fg_color=LINE_COLOR,
+    hover_color="#c73e54"
+)
+overlay_checkbox.pack(pady=(0, 10))
+
+
 user_points = []
 # Add a counter to throttle updates
 draw_counter = 0
@@ -218,18 +279,79 @@ last_x = None  # stores the last position of your mouse
 last_y = None  # stores the last position of your mouse
 drawing_complete = False  #Track if drawing is done
 
+#Get bounding box of user's drawing
+def get_user_bounds():
+    
+    if not user_points:
+        return 0, 0, 500, 500
+    
+    min_x = min(p[0] for p in user_points)
+    max_x = max(p[0] for p in user_points)
+    min_y = min(p[1] for p in user_points)
+    max_y = max(p[1] for p in user_points)
+    
+    return min_x, min_y, max_x, max_y
+
+#Then bounding box of reference points
+def get_reference_bounds():
+    
+    min_x = min(p[0] for p in reference_points)
+    max_x = max(p[0] for p in reference_points)
+    min_y = min(p[1] for p in reference_points)
+    max_y = max(p[1] for p in reference_points)
+    
+    return min_x, min_y, max_x, max_y
+
+# Try to draw perfect shape scaled to match user's drawing
+def draw_reference_overlay():
+   
+    if not user_points:
+        return
+    
+    # Get bounds
+    user_min_x, user_min_y, user_max_x, user_max_y = get_user_bounds()
+    ref_min_x, ref_min_y, ref_max_x, ref_max_y = get_reference_bounds()
+    
+    user_width = user_max_x - user_min_x
+    user_height = user_max_y - user_min_y
+    ref_width = ref_max_x - ref_min_x
+    ref_height = ref_max_y - ref_min_y
+    
+    if ref_width == 0 or ref_height == 0:
+        return
+    
+    # Draw scaled reference points
+    for rx, ry in reference_points[::8]:  # Sample for performance
+        # Scale to user's drawing size and position
+        scaled_x = user_min_x + ((rx - ref_min_x) / ref_width) * user_width
+        scaled_y = user_min_y + ((ry - ref_min_y) / ref_height) * user_height
+        
+        canvas.create_oval(
+            scaled_x - 2, scaled_y - 2,
+            scaled_x + 2, scaled_y + 2,
+            fill="#4ade80",
+            outline="#4ade80",
+            tags="overlay"
+        )
+
+#Redraw just the user's lines, so remove overlay
+def redraw_user_drawing():
+    canvas.delete("overlay")
+
+
 
 #Reset what you drew
 def reset():
     global user_points, draw_counter, last_x, last_y, drawing_complete
     canvas.delete("all")
-    score_label.configure(text="Start drawing!", text_color="#ffffff")
+    score_label.configure(text="Start drawing", text_color="#ffffff")
     hint_label.configure(text="")
     user_points = []
     draw_counter = 0
     last_x = None
     last_y = None
     drawing_complete = False
+    show_overlay.set(False)
 
 def on_click(event):
     global last_x, last_y, drawing_complete
@@ -301,6 +423,10 @@ def stop_drawing(event):
 
     score_label.configure(text=f"Final: {score:.1f}%", text_color=color)
     hint_label.configure(text="Click anywhere to try again")
+
+     # Show overlay if checkbox is checked
+    if show_overlay.get():
+        draw_reference_overlay()
     
 
 # Connect mouse actions to functions
