@@ -1,6 +1,12 @@
 import tkinter as tk
+import customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont
 import math
+
+
+# Set appearance mode and color theme
+ctk.set_appearance_mode("dark")  # "dark", "light", or "system"
+ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
 
 
 #create a list of EDGE points that make up the number 5. Full pixels in 5 value some parts more than others -> uneven scoring.
@@ -48,9 +54,6 @@ def generate_reference_five():
     
     print(f"Generated {len(edge_points)} edge points!")
     return edge_points
-
-# Generate the reference when the program starts
-reference_points = generate_reference_five()
 
 
 #We should be able to draw the 5 anywhere.
@@ -101,132 +104,164 @@ def calculate_score():
     
     norm_user = normalize_points(user_points)
     norm_ref = normalize_points(reference_points)
+
+    sampled_user = norm_user[::3]
+    sampled_ref = norm_ref[::3]
     
     # PART 1: How close are user points to the reference?
     # (Are you drawing ON the "5"?)
     user_to_ref_total = 0
-    for user_point in norm_user:
-        user_x, user_y = user_point
+    for user_x, user_y in sampled_user:
         min_distance = float('inf')
-        
-        for ref_point in norm_ref:
-            ref_x, ref_y = ref_point
+        for ref_x, ref_y in sampled_ref:
             distance = math.sqrt((user_x - ref_x)**2 + (user_y - ref_y)**2)
             if distance < min_distance:
                 min_distance = distance
-        
         user_to_ref_total += min_distance
     
-    user_to_ref_avg = user_to_ref_total / len(norm_user)
+    user_to_ref_avg = user_to_ref_total / len(sampled_user) if sampled_user else 0
     
     # PART 2: How close are reference points to user points?
     # (Did you cover ALL parts of the "5"?)
     ref_to_user_total = 0
-    for ref_point in norm_ref:
-        ref_x, ref_y = ref_point
+    for ref_x, ref_y in sampled_ref:
         min_distance = float('inf')
-        
-        for user_point in norm_user:
-            user_x, user_y = user_point
+        for user_x, user_y in sampled_user:
             distance = math.sqrt((ref_x - user_x)**2 + (ref_y - user_y)**2)
             if distance < min_distance:
                 min_distance = distance
-        
         ref_to_user_total += min_distance
     
-    ref_to_user_avg = ref_to_user_total / len(norm_ref)
+    ref_to_user_avg = ref_to_user_total / len(sampled_ref) if sampled_ref else 0
     
     # Combine both scores (average of both directions)
     combined_avg = (user_to_ref_avg + ref_to_user_avg) / 2
     
     # Convert to percentage
     # Lower combined_avg = better score
-    score = max(0, 100 - (combined_avg * 5))
+    score = max(0, 100 - (combined_avg * 3))
     
     return score
 
 
-#Real time scoring
-def calculate_score_fast():
-    
-    if len(user_points) < 10:
-        return 0.0
-    
-    norm_user = normalize_points(user_points)
-    norm_ref = normalize_points(reference_points)
-    
-    # Sample for speed
-    sampled_user = norm_user[::5]
-    sampled_ref = norm_ref[::5]
-    
-    # Direction 1: User → Reference
-    user_to_ref = 0
-    for ux, uy in sampled_user:
-        min_dist = min(
-            math.sqrt((ux - rx)**2 + (uy - ry)**2)
-            for rx, ry in sampled_ref
-        )
-        user_to_ref += min_dist
-    
-    user_to_ref_avg = user_to_ref / len(sampled_user) if sampled_user else 0
-    
-    # Direction 2: Reference → User
-    ref_to_user = 0
-    for rx, ry in sampled_ref:
-        min_dist = min(
-            math.sqrt((rx - ux)**2 + (ry - uy)**2)
-            for ux, uy in sampled_user
-        )
-        ref_to_user += min_dist
-    
-    ref_to_user_avg = ref_to_user / len(sampled_ref) if sampled_ref else 0
-    
-    # Combine both
-    combined = (user_to_ref_avg + ref_to_user_avg) / 2
-    score = max(0, 100 - (combined * 5))
-    
-    return score
+# Generate the reference when the program starts
+reference_points = generate_reference_five()
 
+
+# Colors
+BG_COLOR = "#1a1a2e"        # Dark blue background
+CANVAS_BG = "#16213e"       # Slightly lighter for canvas
+LINE_COLOR = "#e94560"      # Vibrant pink/red for drawing
+ACCENT_COLOR = "#0f3460"    # Accent blue
 
 # Create the window
-window = tk.Tk()
-window.title("Draw a Perfect 5")
+window = ctk.CTk()
+window.title("Draw a 5")
+window.geometry("600x800")
+window.configure(fg_color=BG_COLOR)
 
-# Create a canvas - this is like a drawing board
-canvas = tk.Canvas(window, width=500, height=500, bg="white")
-canvas.pack()  # This adds the canvas to the window
+# Title label
+title_label = ctk.CTkLabel(
+    window, 
+    text="Perfect Five", 
+    font=ctk.CTkFont(family="Helvetica", size=32, weight="bold"),
+    text_color="#ffffff"
+)
+title_label.pack(pady=(30, 10))
 
-#Show instructions and score
-score_label = tk.Label(window, text="Draw a 5", font=("Arial", 24))
-score_label.pack(pady=10)
+# Subtitle
+subtitle_label = ctk.CTkLabel(
+    window, 
+    text="Draw the number 5", 
+    font=ctk.CTkFont(size=14),
+    text_color="#888888"
+)
+subtitle_label.pack(pady=(0, 20))
+
+# Canvas frame (for rounded corners effect)
+canvas_frame = ctk.CTkFrame(window, fg_color=CANVAS_BG, corner_radius=20)
+canvas_frame.pack(padx=40, pady=10)
+
+# Canvas (still using tk.Canvas for drawing functionality)
+canvas = tk.Canvas(
+    canvas_frame, 
+    width=500, 
+    height=500, 
+    bg=CANVAS_BG,
+    highlightthickness=0,  # Remove border
+    cursor="crosshair"     # Cool cursor
+)
+canvas.pack(padx=10, pady=10)
+
+# Score label
+score_label = ctk.CTkLabel(
+    window, 
+    text="Start drawing", 
+    font=ctk.CTkFont(family="Helvetica", size=28, weight="bold"),
+    text_color="#ffffff"
+)
+score_label.pack(pady=(20, 10))
+
+# Hint label for after drawing
+hint_label = ctk.CTkLabel(
+    window, 
+    text="", 
+    font=ctk.CTkFont(size=14),
+    text_color="#888888"
+)
+hint_label.pack(pady=(0, 20))
 
 user_points = []
+# Add a counter to throttle updates
+draw_counter = 0
+last_x = None  # stores the last position of your mouse
+last_y = None  # stores the last position of your mouse
+drawing_complete = False  #Track if drawing is done
 
 
 #Reset what you drew
 def reset():
-    global user_points, draw_counter
+    global user_points, draw_counter, last_x, last_y, drawing_complete
     canvas.delete("all")
-    score_label.config(text="Draw a 5!")
+    score_label.configure(text="Start drawing!", text_color="#ffffff")
+    hint_label.configure(text="")
     user_points = []
     draw_counter = 0
+    last_x = None
+    last_y = None
+    drawing_complete = False
 
-reset_button = tk.Button(window, text="Reset", command=reset, font=("Arial", 10))
-reset_button.pack(pady=10)
+def on_click(event):
+    global last_x, last_y, drawing_complete
+    
+    # If drawing is complete, reset and start fresh
+    if drawing_complete:
+        reset()
+    
+    # Start tracking from this point
+    last_x = event.x
+    last_y = event.y
 
-
-# This variable stores the last position of your mouse
-last_x = None
-last_y = None
-
-# Add a counter to throttle updates
-draw_counter = 0
 
 def draw(event):
     global last_x, last_y, draw_counter
+
+    # Don't allow drawing if complete
+    if drawing_complete:
+        return
     
     if last_x is not None and last_y is not None:
-        canvas.create_line(last_x, last_y, event.x, event.y, width=5)
+        canvas.create_line(
+            last_x, last_y, 
+            event.x, event.y, 
+            width=6,
+            fill=LINE_COLOR,
+            capstyle=tk.ROUND,
+            joinstyle=tk.ROUND,
+            smooth=True,
+            splinesteps=36
+        )
+    
     
     last_x = event.x
     last_y = event.y
@@ -235,20 +270,42 @@ def draw(event):
     draw_counter += 1
     if draw_counter % 10 == 0:
         score = calculate_score()  # Use the SAME function
-        score_label.config(text=f"Score: {score:.1f}%")
+        score_label.configure(text=f"Score: {score:.1f}%")
 
 
-# This function runs when you release the mouse button
-def reset_position(event):
-    global last_x, last_y
+# runs when you release the mouse button
+def stop_drawing(event):
+    global last_x, last_y, drawing_complete
+    
+    # Don't process if already complete
+    if drawing_complete:
+        return
+    
     last_x = None
     last_y = None
     
+    # Mark drawing as complete
+    drawing_complete = True
+
     score = calculate_score()  # Same function, same score
-    score_label.config(text=f"Final Score: {score:.1f}%")
+
+     # Change color based on score
+    if score >= 80:
+        color = "#4ade80"  # Green
+    elif score >= 60:
+        color = "#facc15"  # Yellow
+    elif score >= 40:
+        color = "#fb923c"  # Orange
+    else:
+        color = "#f87171"  # Red
+
+    score_label.configure(text=f"Final: {score:.1f}%", text_color=color)
+    hint_label.configure(text="Click anywhere to try again")
+    
 
 # Connect mouse actions to functions
-canvas.bind("<B1-Motion>", draw)         # B1-Motion = moving while left-click held
-canvas.bind("<ButtonRelease-1>", reset_position)  # Released left-click
+canvas.bind("<Button-1>", on_click)         # B1-Motion = moving while left-click held
+canvas.bind("<B1-Motion>", draw)  # Released left-click
+canvas.bind("<ButtonRelease-1>", stop_drawing)  # Capture initial click
 
 window.mainloop()
