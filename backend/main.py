@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.scoring import generate_reference, calculate_score
 from backend.schemas import ScoreRequest, ScoreResponse, ReferenceResponse, Point
 
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 app = FastAPI(
     title="Perfect Five API",
     description="Backend API for the Perfect Five app",
@@ -24,8 +27,8 @@ CHARACTERS = ["5", "3", "8", "2", "S", "A", "B"]
 # Cache reference points so we don't regenerate every request
 reference_cache: dict[str, list[tuple]] = {}
 
+#Get reference points with cache if available
 def get_reference(character: str) -> list[tuple]:
-    """Get reference points, using cache if available."""
     if character not in reference_cache:
         reference_cache[character] = generate_reference(character)
     return reference_cache[character]
@@ -101,3 +104,6 @@ def score_drawing(request: ScoreRequest):
         num_user_points=len(request.user_points),
         feedback=feedback,
     )
+
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

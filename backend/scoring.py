@@ -1,5 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont
+from pathlib import Path
 import math
+
+#So this goes to backend/ folder for the font, no matter where I run it from...
+BASE_DIR = Path(__file__).parent
 
 #create a list of EDGE points that make up the number 5. Full pixels in 5 value some parts more than others -> uneven scoring.
 #Now edge points for any character...
@@ -11,9 +15,10 @@ def generate_reference(character="5"):
 
     #Load the font
     try:
-        font = ImageFont.truetype("LibreFranklin-Bold.ttf", 350)
+        font_path = BASE_DIR / "LibreFranklin-Bold.ttf"
+        font = ImageFont.truetype(str(font_path), 350)
     except:
-        print("font not found! Using default.")
+        print("Font not found. Using default.")
         font = ImageFont.load_default()
 
 
