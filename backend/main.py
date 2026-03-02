@@ -13,14 +13,19 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware — needed later when your frontend talks to this backend
+# CORS middleware — needed later when frontend talks to backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Lock this down in production
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://perfect-five-beta.vercel.app/", 
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 CHARACTERS = ["5", "3", "8", "2", "S", "A", "B"]
 
