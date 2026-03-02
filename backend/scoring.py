@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 import math
+import os
 
 #So this goes to backend/ folder for the font, no matter where I run it from...
 BASE_DIR = Path(__file__).parent
@@ -14,11 +15,16 @@ def generate_reference(character="5"):
     draw = ImageDraw.Draw(img)
 
     #Load the font
+    font_path = BASE_DIR / "librefranklin-bold.ttf"
+    
     try:
-        font_path = BASE_DIR / "LibreFranklin-Bold.ttf"
-        font = ImageFont.truetype(str(font_path), 350)
-    except:
-        print("Font not found. Using default.")
+        if font_path.exists():
+            font = ImageFont.truetype(str(font_path), 350)
+        else:
+            print(f"Font not found at {font_path}, using default.")
+            font = ImageFont.load_default()
+    except Exception as e:
+        print(f"Font error: {e}, using default.")
         font = ImageFont.load_default()
 
 
