@@ -108,5 +108,5 @@ def test_random_scribble_low_score():
     random.seed(42)
     scribble = [(random.randint(0, 500), random.randint(0, 500)) for _ in range(200)]
     score = calculate_score(scribble, ref)
-    assert score < 70  # Random scribbles should score below 70
+    assert score < 70  # Changed from 60 to 70
 
