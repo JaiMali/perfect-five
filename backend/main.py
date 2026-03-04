@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.scoring import generate_reference, calculate_score
-from backend.schemas import ScoreRequest, ScoreResponse, ReferenceResponse, Point
-
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+try:
+    from backend.scoring import generate_reference, calculate_score
+    from backend.schemas import ScoreRequest, ScoreResponse, ReferenceResponse, Point
+except ImportError:
+    from scoring import generate_reference, calculate_score
+    from schemas import ScoreRequest, ScoreResponse, ReferenceResponse, Point
 
 app = FastAPI(
     title="Perfect Five API",
@@ -19,6 +20,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:3000",
         "https://perfect-five-beta.vercel.app/", 
     ],
     allow_credentials=True,
@@ -110,5 +112,3 @@ def score_drawing(request: ScoreRequest):
         feedback=feedback,
     )
 
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
