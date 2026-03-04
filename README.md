@@ -3,7 +3,7 @@ Intended to be a copy cat of the game where you need to draw a perfect circle. (
 My take on making a mini game with python for the first time, and experimenting with FastAPI, TypeScript, and React
 
 
-Live Demo: https://perfect-five.vercel.app
+Live Demo: https://perfect-five-9hry4w30t-jaimalis-projects.vercel.app
 API Documentation: https://perfect-five-api.onrender.com/docs
 
 
